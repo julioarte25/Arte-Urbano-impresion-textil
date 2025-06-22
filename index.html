@@ -1,0 +1,186 @@
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Arte Urbano – Recibos de Pago</title>
+
+<!-- ⬇️  ESTILOS: deja los tuyos tal cual; no los recorté para no cambiar tu diseño -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>/* …todo tu bloque <style> original sin tocar… */</style>
+</head>
+
+<body>
+<div class="app-container">
+  <div class="app-header">
+    <i class="fas fa-tshirt"></i>
+    <h1>Arte Urbano – Recibos</h1>
+  </div>
+
+  <div class="main-content">
+    <!-- ========= FORMULARIO ========= -->
+    <div class="company-details">
+      <h3><i class="fas fa-building"></i> Arte Urbano Impresión Textil</h3>
+      <p><strong>Pago:</strong> Semanal (Sábados)</p>
+      <p><strong>RUC:</strong> 12345678901</p>
+    </div>
+
+    <h2 class="section-title"><i class="fas fa-user-tie"></i> Información del Empleado</h2>
+
+    <!-- EMPLEADO (select) -->
+    <div class="form-group">
+      <label for="employeeSelect"><i class="fas fa-user"></i> Empleado</label>
+      <select id="employeeSelect">
+        <option value="" disabled selected>Selecciona un empleado…</option>
+      </select>
+    </div>
+
+    <!-- ID (autollenado) -->
+    <div class="form-group">
+      <label for="employeeId"><i class="fas fa-id-card"></i> Identificación</label>
+      <input id="employeeId" readonly>
+    </div>
+
+    <!-- Cargo -->
+    <div class="form-group">
+      <label for="employeePosition"><i class="fas fa-briefcase"></i> Cargo</label>
+      <input id="employeePosition" placeholder="Operario / Diseñador etc.">
+    </div>
+
+    <!-- PERÍODO -->
+    <div class="pay-period">
+      <div class="form-group">
+        <label for="payPeriodStart"><i class="fas fa-calendar-alt"></i> Inicio</label>
+        <input type="date" id="payPeriodStart">
+      </div>
+      <div class="form-group">
+        <label for="payPeriodEnd"><i class="fas fa-calendar-alt"></i> Fin</label>
+        <input type="date" id="payPeriodEnd">
+      </div>
+    </div>
+
+    <!-- ASISTENCIA -->
+    <h3 class="section-title"><i class="fas fa-calendar-check"></i> Asistencia</h3>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      <label><input type="checkbox" class="att" checked> Lun</label>
+      <label><input type="checkbox" class="att" checked> Mar</label>
+      <label><input type="checkbox" class="att" checked> Mié</label>
+      <label><input type="checkbox" class="att" checked> Jue</label>
+      <label><input type="checkbox" class="att" checked> Vie</label>
+      <label><input type="checkbox" class="att" checked> Sáb</label>
+    </div>
+
+    <!-- SUELDO BASE (readonly) -->
+    <div class="form-group">
+      <label for="baseSalary"><i class="fas fa-coins"></i> Sueldo Base</label>
+      <input type="number" id="baseSalary" readonly>
+    </div>
+
+    <!-- Horas extras + incentivos + deducciones: deja todos tus inputs numéricos originales aquí … -->
+
+    <!-- BOTONES -->
+    <button class="btn" id="generateBtn"><i class="fas fa-sync"></i> Generar Recibo</button>
+
+    <!-- PREVIEW + Botones imprimir/guardar -->
+    <div class="receipt-preview" id="receiptPreview">
+      <!-- …tu vista previa original… -->
+      <div class="action-buttons">
+        <button class="btn btn-warning" id="printBtn"><i class="fas fa-print"></i> Imprimir</button>
+        <button class="btn btn-success" id="saveBtn"><i class="fas fa-download"></i> Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFICACIÓN -->
+<div class="notification" id="notification"><i class="fas fa-check-circle"></i><span></span></div>
+
+<!-- ==========  SCRIPTS  ========== -->
+<script src="https://unpkg.com/idb@7/build/umd.js"></script>
+<script>
+/* === 1. Datos fijos de empleados === */
+const EMPLOYEES = [
+  {id:'CED-001', name:'Alexandra López',     base:3500},
+  {id:'CED-002', name:'Luis Fernando',      base:5000},
+  {id:'CED-003', name:'George Sánchez',     base:3000},
+  {id:'CED-004', name:'Alba Luz De los Santos', base:3000},
+];
+
+/* === 2. IndexedDB para guardar recibos === */
+let db;
+idb.openDB('arteUrbanoRecibos',1,{upgrade(db){db.createObjectStore('recibos',{keyPath:'id',autoIncrement:true});}})
+.then(d=>db=d);
+
+/* === 3. Utilidades === */
+const $ = id => document.getElementById(id);
+const money = v => '$'+v.toFixed(2);
+function notify(t){const n=$('notification');n.querySelector('span').textContent=t;n.style.display='flex';setTimeout(()=>n.style.display='none',2500);}
+
+/* === 4. Carga inicial === */
+document.addEventListener('DOMContentLoaded', ()=>{
+  /* llenar lista empleados */
+  EMPLOYEES.forEach(e=>{
+    const o=document.createElement('option');
+    o.value=e.id;o.textContent=e.name;$('employeeSelect').appendChild(o);
+  });
+  $('employeeSelect').addEventListener('change',()=>{
+    const emp=EMPLOYEES.find(e=>e.id===$('employeeSelect').value);
+    $('employeeId').value=emp.id;
+    $('baseSalary').value=emp.base.toFixed(2);
+  });
+
+  /* set lunes-sábado actual */
+  const today=new Date(), mon=new Date(today); mon.setDate(today.getDate()-((today.getDay()+6)%7));
+  const sat=new Date(mon); sat.setDate(mon.getDate()+5);
+  const iso=d=>d.toISOString().split('T')[0];
+  $('payPeriodStart').value=iso(mon); $('payPeriodEnd').value=iso(sat);
+
+  /* botones */
+  $('generateBtn').onclick = generarRecibo;
+  $('printBtn').onclick    = ()=>window.print();
+  $('saveBtn').onclick     = ()=>notify('Recibo guardado localmente');
+});
+
+/* === 5. Generar recibo, calcular y guardar === */
+async function generarRecibo(){
+  /* empleado seleccionado */
+  const emp=EMPLOYEES.find(e=>e.id===$('employeeSelect').value);
+  if(!emp){alert('Selecciona un empleado');return;}
+
+  /* asistencia */
+  const diasTrab = [...document.querySelectorAll('.att')].filter(c=>c.checked).length;
+  const sueldoAsistencia = emp.base * (diasTrab/6);
+
+  /* otros valores */
+  const getNum=id=>parseFloat($(id).value)||0;
+  const overtime = getNum('overtimePay');
+  const incentivos = getNum('punctuality')+getNum('cooperation')+getNum('noCellphone')+getNum('production');
+  const bonus = getNum('bonus');
+  const earnings = sueldoAsistencia + overtime + incentivos + bonus;
+
+  const deductions = getNum('taxes')+getNum('socialSecurity')+getNum('otherDeductions');
+  const netPay = earnings - deductions;
+
+  /* actualizar preview rápido */
+  $('previewEmployee').textContent=emp.name;
+  $('previewEmployeeId').textContent=emp.id;
+  $('previewPosition').textContent=$('employeePosition').value||'Empleado';
+  $('previewTotalEarnings').textContent = money(earnings);
+  $('previewTotalDeductions').textContent= money(deductions);
+  $('previewNetPay').textContent       = money(netPay);
+  $('netPay').value = money(netPay);
+
+  /* guardar en DB */
+  await db.add('recibos',{
+    empleado: emp.name,
+    idEmp: emp.id,
+    periodoIni: $('payPeriodStart').value,
+    periodoFin: $('payPeriodEnd').value,
+    fechaPago:  $('payPeriodEnd').value,
+    diasTrab, overtime, incentivos, bonus, deductions, netPay
+  });
+
+  notify('¡Recibo generado y guardado!');
+}
+</script>
+</body>
+</html>
