@@ -1,0 +1,21 @@
+{
+  "name": "Arte Urbano - Recibos",
+  "short_name": "ArteUrbano",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#16a085",
+  "description": "App para generar recibos semanales para empleados de Arte Urbano Impresión Textil.",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/706/706830.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/706/706830.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
