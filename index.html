@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Arte Urbano · Recibos</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+/*  ───────────────────  ESTILO  ─────────────────── */
+:root{--brand:#16a085;--bg:#f5f7fa;--txt:#333;--warn:#f39c12;--ok:#2ecc71}
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+body{background:var(--bg);color:var(--txt);min-height:100vh}
+header{display:flex;gap:8px;align-items:center;padding:14px;background:linear-gradient(135deg,var(--brand),#1abc9c);color:#fff}
+header h1{font-size:1.2rem;font-weight:600}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;border-top:1px solid #ddd;background:#fff}
+nav button{flex:1;padding:10px 0;border:none;background:#fff;color:#666;font-size:.85rem}
+nav button.active{color:var(--brand);font-weight:600}
+main{padding:16px 16px 90px}
+.section{margin-top:18px}
+.section h2{font-size:1rem;margin-bottom:8px;color:var(--brand);display:flex;gap:6px;align-items:center}
+.form-group{margin-bottom:12px}
+label{display:block;font-size:.88rem;margin-bottom:4px}
+input,select{width:100%;padding:10px;border:1px solid #d1d8e0;border-radius:8px;font-size:.9rem}
+input:focus,select:focus{border-color:var(--brand);outline:none}
+.btn{display:flex;gap:6px;align-items:center;justify-content:center;padding:11px;border:none;border-radius:10px;width:100%;font-size:.9rem;font-weight:600;color:#fff;background:var(--brand);margin-top:14px}
+.btn-warn{background:var(--warn)}
+.btn-ok{background:var(--ok)}
+.preview{background:#fff;border:1px solid #e0e6ed;border-radius:14px;padding:16px;margin-top:18px;font-size:.85rem}
+.preview h3{text-align:center;color:var(--brand);margin-bottom:6px;font-size:1rem}
+.table{width:100%;border-collapse:collapse;font-size:.8rem;margin:6px 0}
+.table th{background:rgba(0,0,0,.04);text-align:left;padding:6px}
+.table td{padding:6px;border-bottom:1px solid #eee}
+.total{display:flex;justify-content:space-between;margin:4px 0}
+.total.final{font-weight:700;color:var(--brand);border-top:1px dashed var(--brand);padding-top:6px}
+.notice{position:fixed;top:15px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:10px 18px;border-radius:30px;display:none}
+history-item{display:block;background:#fff;border-left:4px solid var(--brand);padding:10px 14px;border-radius:12px;margin-bottom:10px}
+history-item h4{font-size:.9rem;color:var(--brand)}
+history-item small{display:block;color:#666}
+@media print{header,nav,.btn{display:none}.preview{border:none}}
+</style>
+</head>
+<body>
+<header><i class="fas fa-tshirt"></i><h1>Arte Urbano · Recibos</h1></header>
+
+<main id="tab-new">
+  <!-- EMPLEADO -->
+  <div class="section">
+    <h2><i class="fas fa-user-tie"></i> Empleado</h2>
+    <div class="form-group">
+      <label>Nombre</label>
+      <select id="empSel"><option disabled selected>Selecciona…</option></select>
+    </div>
+    <div class="form-group"><label>ID</label><input id="empId" readonly></div>
+    <div class="form-group"><label>Cargo</label><input id="empPos" placeholder="Ej.: Operario"></div>
+  </div>
+
+  <!-- PERÍODO -->
+  <div class="section">
+    <h2><i class="fas fa-calendar-alt"></i> Periodo</h2>
+    <div style="display:flex;gap:10px">
+      <input type="date" id="pIni" style="flex:1">
+      <input type="date" id="pFin" style="flex:1">
+    </div>
+  </div>
+
+  <!-- ASISTENCIA -->
+  <div class="section">
+    <h2><i class="fas fa-calendar-check"></i> Asistencia</h2>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      ${['Lu','Ma','Mi','Ju','Vi','Sa'].map(d=><label><input type="checkbox" class="att" checked> ${d}</label>).join('')}
+    </div>
+  </div>
+
+  <!-- PAGOS -->
+  <div class="section">
+    <h2><i class="fas fa-coins"></i> Pagos</h2>
+    <div class="form-group"><label>Sueldo base</label><input id="base" readonly></div>
+    <div class="form-group"><label>Horas extra</label><input type="number" id="extra" step="0.01" value="0"></div>
+    <div class="form-group"><label>Incentivos (total)</label><input type="number" id="inc" step="0.01" value="0"></div>
+  </div>
+
+  <!-- DEDUCCIONES -->
+  <div class="section">
+    <h2><i class="fas fa-minus-circle"></i> Deducciones</h2>
+    <div class="form-group"><label>Impuestos</label><input type="number" id="tax" step="0.01" value="0"></div>
+    <div class="form-group"><label>Seguro social</label><input type="number" id="seg" step="0.01" value="0"></div>
+  </div>
+
+  <button class="btn" id="gen"><i class="fas fa-sync"></i> Generar recibo</button>
+
+  <!-- PREVIEW -->
+  <div class="preview" id="prev" hidden>
+    <h3 id="prevEmp"></h3>
+    <small id="prevPer"></small>
+
+    <table class="table" id="tbEarn"><thead><tr><th>Concepto</th><th>Monto</th></tr></thead><tbody></tbody></table>
+    <table class="table" id="tbDed"><thead><tr><th>Deducción</th><th>Monto</th></tr></thead><tbody></tbody></table>
+
+    <div class="total"><span>Ingresos:</span><span id="tEarn">$0</span></div>
+    <div class="total"><span>Deducciones:</span><span id="tDed">$0</span></div>
+    <div class="total final"><span>Neto:</span><span id="tNet">$0</span></div>
+
+    <div style="display:flex;gap:10px;margin-top:10px">
+      <button class="btn-warn btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
+      <button class="btn-ok btn" id="save"><i class="fas fa-download"></i> Guardar</button>
+    </div>
+  </div>
+</main>
+
+<!-- TAB HISTÓRICO -->
+<main id="tab-hist" hidden>
+  <div class="section"><h2><i class="fas fa-history"></i> Histórico</h2></div>
+  <div id="hist"></div>
+</main>
+
+<nav>
+  <button class="active" data-tab="new"><i class="fas fa-file-alt"></i><br>Nuevo</button>
+  <button data-tab="hist"><i class="fas fa-list"></i><br>Histórico</button>
+</nav>
+
+<div class="notice" id="noti"></div>
+
+<script src="https://unpkg.com/idb@7/build/umd.js"></script>
+<script>
+/* ======= EMPLEADOS ======= */
+const EMP=[
+ {id:'CED-001',name:'Alexandra López',   base:3500},
+ {id:'CED-002',name:'Luis Fernando',     base:5000},
+ {id:'CED-003',name:'George Sánchez',    base:3000},
+ {id:'CED-004',name:'Alba Luz De los S.',base:3000},
+];
+
+/* ======= IndexedDB ======= */
+let db;
+idb.openDB('arteUR',1,{upgrade(db){db.createObjectStore('recibos',{keyPath:'k',autoIncrement:true});}})
+.then(d=>db=d);
+
+/* ======= Atajos ======= */
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const money=v=>'$'+v.toFixed(2);
+const notice=t=>{const n=$("#noti");n.textContent=t;n.style.display='block';setTimeout(()=>n.style.display='none',2500)};
+
+/* ======= Tabs ======= */
+$$('nav button').forEach(b=>b.onclick=()=>{
+  $$('nav button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  $('#tab-new' ).hidden=b.dataset.tab!=='new';
+  $('#tab-hist').hidden=b.dataset.tab!=='hist';
+  if(b.dataset.tab==='hist') loadHist();
+});
+
+/* ======= Fill employee list ======= */
+const sel=$('#empSel');
+EMP.forEach(e=>sel.insertAdjacentHTML('beforeend',<option value="${e.id}">${e.name}</option>));
+sel.onchange=()=>{
+  const e=EMP.find(x=>x.id===sel.value);
+  $('#empId').value=e.id;
+  $('#base').value=e.base.toFixed(2);
+  $('#prevEmp').textContent=e.name;
+};
+
+/* ======= Default week ======= */
+const today=new Date(), mon=new Date(today); mon.setDate(today.getDate()-((today.getDay()+6)%7));
+const sat=new Date(mon); sat.setDate(mon.getDate()+5);
+const iso=d=>d.toISOString().split('T')[0];
+$('#pIni').value=iso(mon);$('#pFin').value=iso(sat);
+$('#prevPer').textContent=${mon.toLocaleDateString('es-ES')} – ${sat.toLocaleDateString('es-ES')};
+
+/* ======= Generar recibo ======= */
+$('#gen').onclick=()=>{
+  const e=EMP.find(x=>x.id===sel.value); if(!e) return alert('Selecciona empleado');
+  const dias=$$('.att').filter(c=>c.checked).length;
+  const base=e.base*(dias/6);
+  const extra=+$('#extra').value||0, inc=+$('#inc').value||0;
+  const earn=base+extra+inc;
+  const ded=+$('#tax').value+ +$('#seg').value;
+  const net=earn-ded;
+
+  // preview
+  const EB=$('#tbEarn tbody');EB.innerHTML='';
+  const DB=$('#tbDed tbody');DB.innerHTML='';
+  const row=(tb,l,v)=>tb.insertAdjacentHTML('beforeend',<tr><td>${l}</td><td>${money(v)}</td></tr>);
+  row(EB,'Sueldo ('+dias+'/6)',base); if(extra)row(EB,'Horas extra',extra); if(inc)row(EB,'Incentivos',inc);
+  if(ded){ if(+$('#tax').value)row(DB,'Impuestos',+$('#tax').value); if(+$('#seg').value)row(DB,'Seguro social',+$('#seg').value);}
+  $('#tEarn').textContent=money(earn);$('#tDed').textContent=money(ded);$('#tNet').textContent=money(net);
+  $('#prev').hidden=false;
+
+  // handler guardar
+  $('#save').onclick=async()=>{
+    await db.add('recibos',{
+      nombre:e.name,id:e.id,ini:$('#pIni').value,fin:$('#pFin').value,
+      dias,base,extra,inc,ded,net,fecha:new Date().toISOString()
+    });
+    notice('Recibo guardado ✓');
+  };
+};
+
+/* ======= Cargar histórico ======= */
+async function loadHist(){
+  const list=await db.getAll('recibos');
+  const cont=$('#hist');cont.innerHTML='';
+  if(!list.length){cont.textContent='(Sin recibos)';return}
+  list.reverse().forEach(r=>{
+    cont.insertAdjacentHTML('beforeend',`
+      <history-item>
+        <h4>${r.nombre}</h4>
+        <small>${new Date(r.fecha).toLocaleDateString()} · ${r.ini} – ${r.fin}</small>
+        Neto: <strong>${money(r.net)}</strong>
+      </history-item>`);
+  });
+}
+
+/* ======= PWA: registrar service worker ======= */
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
