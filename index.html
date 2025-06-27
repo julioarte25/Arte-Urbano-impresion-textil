@@ -1,224 +1,394 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Arte Urbano · Recibos</title>
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.IO;
+using System.Drawing;
+using System.Drawing.Imaging;
 
-<link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
+namespace ArteUrbanoNomina
+{
+    public class Empleado
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; }
+        public string Cedula { get; set; }
+        public string Departamento { get; set; }
+        public string Cargo { get; set; }
+        public decimal SueldoBase { get; set; } = 3000m; // Sueldo base RD$3,000
+        public Dictionary<string, decimal> Incentivos { get; set; } = new Dictionary<string, decimal>
+        {
+            {"Puntualidad", 0},
+            {"Cooperación", 0},
+            {"Disciplina", 0},
+            {"No uso del celular", 0}
+        };
+        public decimal Descuentos { get; set; }
+        public string FotoPerfilPath { get; set; }
+        public DateTime FechaContratacion { get; set; }
+    }
 
-<link rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>
-/*  ───────────────────  ESTILO  ─────────────────── */
-:root{--brand:#16a085;--bg:#f5f7fa;--txt:#333;--warn:#f39c12;--ok:#2ecc71}
-*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
-body{background:var(--bg);color:var(--txt);min-height:100vh}
-header{display:flex;gap:8px;align-items:center;padding:14px;background:linear-gradient(135deg,var(--brand),#1abc9c);color:#fff}
-header h1{font-size:1.2rem;font-weight:600}
-nav{position:fixed;bottom:0;left:0;right:0;display:flex;border-top:1px solid #ddd;background:#fff}
-nav button{flex:1;padding:10px 0;border:none;background:#fff;color:#666;font-size:.85rem}
-nav button.active{color:var(--brand);font-weight:600}
-main{padding:16px 16px 90px}
-.section{margin-top:18px}
-.section h2{font-size:1rem;margin-bottom:8px;color:var(--brand);display:flex;gap:6px;align-items:center}
-.form-group{margin-bottom:12px}
-label{display:block;font-size:.88rem;margin-bottom:4px}
-input,select{width:100%;padding:10px;border:1px solid #d1d8e0;border-radius:8px;font-size:.9rem}
-input:focus,select:focus{border-color:var(--brand);outline:none}
-.btn{display:flex;gap:6px;align-items:center;justify-content:center;padding:11px;border:none;border-radius:10px;width:100%;font-size:.9rem;font-weight:600;color:#fff;background:var(--brand);margin-top:14px}
-.btn-warn{background:var(--warn)}
-.btn-ok{background:var(--ok)}
-.preview{background:#fff;border:1px solid #e0e6ed;border-radius:14px;padding:16px;margin-top:18px;font-size:.85rem}
-.preview h3{text-align:center;color:var(--brand);margin-bottom:6px;font-size:1rem}
-.table{width:100%;border-collapse:collapse;font-size:.8rem;margin:6px 0}
-.table th{background:rgba(0,0,0,.04);text-align:left;padding:6px}
-.table td{padding:6px;border-bottom:1px solid #eee}
-.total{display:flex;justify-content:space-between;margin:4px 0}
-.total.final{font-weight:700;color:var(--brand);border-top:1px dashed var(--brand);padding-top:6px}
-.notice{position:fixed;top:15px;left:50%;transform:translateX(-50%);background:var(--ok);color:#fff;padding:10px 18px;border-radius:30px;display:none}
-history-item{display:block;background:#fff;border-left:4px solid var(--brand);padding:10px 14px;border-radius:12px;margin-bottom:10px}
-history-item h4{font-size:.9rem;color:var(--brand)}
-history-item small{display:block;color:#666}
-@media print{header,nav,.btn{display:none}.preview{border:none}}
-</style>
-</head>
-<body>
-<header><i class="fas fa-tshirt"></i><h1>Arte Urbano · Recibos</h1></header>
+    public static class EmpresaInfo
+    {
+        public const string Nombre = "ARTE URBANO";
+        public const string Slogan = "Expertos en impresión textil premium";
+        public const string Direccion = "Detrás de la Urbanización La Terraza, Santiago, Rep. Dom.";
+        public const string Telefono = "809-909-0455";
+        public const string Email = "julio271975@hotmail.com";
+        public const string RNC = "1-23-45678-9";
+    }
 
-<main id="tab-new">
-  <!-- EMPLEADO -->
-  <div class="section">
-    <h2><i class="fas fa-user-tie"></i> Empleado</h2>
-    <div class="form-group">
-      <label>Nombre</label>
-      <select id="empSel"><option disabled selected>Selecciona…</option></select>
-    </div>
-    <div class="form-group"><label>ID</label><input id="empId" readonly></div>
-    <div class="form-group"><label>Cargo</label><input id="empPos" placeholder="Ej.: Operario"></div>
-  </div>
+    class Program
+    {
+        static List<Empleado> empleados = new List<Empleado>();
+        static readonly string directorioFotos = Path.Combine(Directory.GetCurrentDirectory(), "FotosEmpleados");
+        static readonly string fotoEjemploPath = Path.Combine(directorioFotos, "empleado_ejemplo.jpg");
 
-  <!-- PERÍODO -->
-  <div class="section">
-    <h2><i class="fas fa-calendar-alt"></i> Periodo</h2>
-    <div style="display:flex;gap:10px">
-      <input type="date" id="pIni" style="flex:1">
-      <input type="date" id="pFin" style="flex:1">
-    </div>
-  </div>
+        static void Main(string[] args)
+        {
+            ConfigurarDirectorios();
+            CrearFotoEjemplo();
 
-  <!-- ASISTENCIA -->
-  <div class="section">
-    <h2><i class="fas fa-calendar-check"></i> Asistencia</h2>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-      ${['Lu','Ma','Mi','Ju','Vi','Sa'].map(d=><label><input type="checkbox" class="att" checked> ${d}</label>).join('')}
-    </div>
-  </div>
+            while (true)
+            {
+                MostrarMenuPrincipal();
+                var opcion = Console.ReadLine();
 
-  <!-- PAGOS -->
-  <div class="section">
-    <h2><i class="fas fa-coins"></i> Pagos</h2>
-    <div class="form-group"><label>Sueldo base</label><input id="base" readonly></div>
-    <div class="form-group"><label>Horas extra</label><input type="number" id="extra" step="0.01" value="0"></div>
-    <div class="form-group"><label>Incentivos (total)</label><input type="number" id="inc" step="0.01" value="0"></div>
-  </div>
+                switch (opcion)
+                {
+                    case "1": RegistrarEmpleado(); break;
+                    case "2": CalcularNomina(); break;
+                    case "3": MostrarRecibo(); break;
+                    case "4": AsignarFoto(); break;
+                    case "5": VerFoto(); break;
+                    case "6": return;
+                    default: MostrarError("Opción inválida"); break;
+                }
+            }
+        }
 
-  <!-- DEDUCCIONES -->
-  <div class="section">
-    <h2><i class="fas fa-minus-circle"></i> Deducciones</h2>
-    <div class="form-group"><label>Impuestos</label><input type="number" id="tax" step="0.01" value="0"></div>
-    <div class="form-group"><label>Seguro social</label><input type="number" id="seg" step="0.01" value="0"></div>
-  </div>
+        static void ConfigurarDirectorios()
+        {
+            if (!Directory.Exists(directorioFotos))
+                Directory.CreateDirectory(directorioFotos);
+        }
 
-  <button class="btn" id="gen"><i class="fas fa-sync"></i> Generar recibo</button>
+        static void CrearFotoEjemplo()
+        {
+            if (!File.Exists(fotoEjemploPath))
+            {
+                using (var bitmap = new Bitmap(200, 200))
+                {
+                    using (var g = Graphics.FromImage(bitmap))
+                    {
+                        g.Clear(Color.LightGray);
+                        g.DrawString("EJEMPLO", new Font("Arial", 20), Brushes.Black, 50, 80);
+                        g.DrawString("Foto Perfil", new Font("Arial", 12), Brushes.Black, 60, 120);
+                    }
+                    bitmap.Save(fotoEjemploPath, ImageFormat.Jpeg);
+                }
+            }
+        }
 
-  <!-- PREVIEW -->
-  <div class="preview" id="prev" hidden>
-    <h3 id="prevEmp"></h3>
-    <small id="prevPer"></small>
+        static void MostrarMenuPrincipal()
+        {
+            Console.Clear();
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("═══════════════════════════════════════════════");
+            Console.WriteLine($"           {EmpresaInfo.Nombre}");
+            Console.WriteLine($"       {EmpresaInfo.Slogan}");
+            Console.WriteLine("═══════════════════════════════════════════════");
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine($"📍 {EmpresaInfo.Direccion}");
+            Console.WriteLine($"📞 {EmpresaInfo.Telefono} | ✉ {EmpresaInfo.Email}");
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("═══════════════════════════════════════════════");
+            Console.ForegroundColor = ConsoleColor.White;
 
-    <table class="table" id="tbEarn"><thead><tr><th>Concepto</th><th>Monto</th></tr></thead><tbody></tbody></table>
-    <table class="table" id="tbDed"><thead><tr><th>Deducción</th><th>Monto</th></tr></thead><tbody></tbody></table>
+            Console.WriteLine("\n1. Registrar Empleado");
+            Console.WriteLine("2. Calcular Nómina");
+            Console.WriteLine("3. Generar Recibo");
+            Console.WriteLine("4. Asignar Foto a Empleado");
+            Console.WriteLine("5. Ver Foto de Empleado");
+            Console.WriteLine("6. Salir");
+            Console.Write("\nSeleccione una opción: ");
+        }
 
-    <div class="total"><span>Ingresos:</span><span id="tEarn">$0</span></div>
-    <div class="total"><span>Deducciones:</span><span id="tDed">$0</span></div>
-    <div class="total final"><span>Neto:</span><span id="tNet">$0</span></div>
+        static void RegistrarEmpleado()
+        {
+            Console.Clear();
+            Console.WriteLine("📝 REGISTRAR NUEVO EMPLEADO\n");
 
-    <div style="display:flex;gap:10px;margin-top:10px">
-      <button class="btn-warn btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>
-      <button class="btn-ok btn" id="save"><i class="fas fa-download"></i> Guardar</button>
-    </div>
-  </div>
-</main>
+            try
+            {
+                var empleado = new Empleado();
 
-<!-- TAB HISTÓRICO -->
-<main id="tab-hist" hidden>
-  <div class="section"><h2><i class="fas fa-history"></i> Histórico</h2></div>
-  <div id="hist"></div>
-</main>
+                Console.Write("ID: ");
+                empleado.Id = int.Parse(Console.ReadLine());
 
-<nav>
-  <button class="active" data-tab="new"><i class="fas fa-file-alt"></i><br>Nuevo</button>
-  <button data-tab="hist"><i class="fas fa-list"></i><br>Histórico</button>
-</nav>
+                Console.Write("Nombre completo: ");
+                empleado.Nombre = Console.ReadLine();
 
-<div class="notice" id="noti"></div>
+                Console.Write("Cédula: ");
+                empleado.Cedula = Console.ReadLine();
 
-<script src="https://unpkg.com/idb@7/build/umd.js"></script>
-<script>
-/* ======= EMPLEADOS ======= */
-const EMP=[
- {id:'CED-001',name:'Alexandra López',   base:3500},
- {id:'CED-002',name:'Luis Fernando',     base:5000},
- {id:'CED-003',name:'George Sánchez',    base:3000},
- {id:'CED-004',name:'Alba Luz De los S.',base:3000},
-];
+                Console.Write("Departamento: ");
+                empleado.Departamento = Console.ReadLine();
 
-/* ======= IndexedDB ======= */
-let db;
-idb.openDB('arteUR',1,{upgrade(db){db.createObjectStore('recibos',{keyPath:'k',autoIncrement:true});}})
-.then(d=>db=d);
+                Console.Write("Cargo: ");
+                empleado.Cargo = Console.ReadLine();
 
-/* ======= Atajos ======= */
-const $=s=>document.querySelector(s);
-const $$=s=>[...document.querySelectorAll(s)];
-const money=v=>'$'+v.toFixed(2);
-const notice=t=>{const n=$("#noti");n.textContent=t;n.style.display='block';setTimeout(()=>n.style.display='none',2500)};
+                Console.Write("Fecha de contratación (dd/mm/aaaa): ");
+                empleado.FechaContratacion = DateTime.Parse(Console.ReadLine());
 
-/* ======= Tabs ======= */
-$$('nav button').forEach(b=>b.onclick=()=>{
-  $$('nav button').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active');
-  $('#tab-new' ).hidden=b.dataset.tab!=='new';
-  $('#tab-hist').hidden=b.dataset.tab!=='hist';
-  if(b.dataset.tab==='hist') loadHist();
-});
+                // Asignar foto de ejemplo por defecto
+                empleado.FotoPerfilPath = fotoEjemploPath;
 
-/* ======= Fill employee list ======= */
-const sel=$('#empSel');
-EMP.forEach(e=>sel.insertAdjacentHTML('beforeend',<option value="${e.id}">${e.name}</option>));
-sel.onchange=()=>{
-  const e=EMP.find(x=>x.id===sel.value);
-  $('#empId').value=e.id;
-  $('#base').value=e.base.toFixed(2);
-  $('#prevEmp').textContent=e.name;
-};
+                empleados.Add(empleado);
+                MostrarExito("Empleado registrado exitosamente!");
+            }
+            catch (Exception ex)
+            {
+                MostrarError($"Error: {ex.Message}");
+            }
+        }
 
-/* ======= Default week ======= */
-const today=new Date(), mon=new Date(today); mon.setDate(today.getDate()-((today.getDay()+6)%7));
-const sat=new Date(mon); sat.setDate(mon.getDate()+5);
-const iso=d=>d.toISOString().split('T')[0];
-$('#pIni').value=iso(mon);$('#pFin').value=iso(sat);
-$('#prevPer').textContent=${mon.toLocaleDateString('es-ES')} – ${sat.toLocaleDateString('es-ES')};
+        static void CalcularNomina()
+        {
+            Console.Clear();
+            Console.WriteLine("💰 CALCULAR NÓMINA\n");
 
-/* ======= Generar recibo ======= */
-$('#gen').onclick=()=>{
-  const e=EMP.find(x=>x.id===sel.value); if(!e) return alert('Selecciona empleado');
-  const dias=$$('.att').filter(c=>c.checked).length;
-  const base=e.base*(dias/6);
-  const extra=+$('#extra').value||0, inc=+$('#inc').value||0;
-  const earn=base+extra+inc;
-  const ded=+$('#tax').value+ +$('#seg').value;
-  const net=earn-ded;
+            try
+            {
+                Console.Write("ID del empleado: ");
+                var id = int.Parse(Console.ReadLine());
+                var empleado = empleados.FirstOrDefault(e => e.Id == id);
 
-  // preview
-  const EB=$('#tbEarn tbody');EB.innerHTML='';
-  const DB=$('#tbDed tbody');DB.innerHTML='';
-  const row=(tb,l,v)=>tb.insertAdjacentHTML('beforeend',<tr><td>${l}</td><td>${money(v)}</td></tr>);
-  row(EB,'Sueldo ('+dias+'/6)',base); if(extra)row(EB,'Horas extra',extra); if(inc)row(EB,'Incentivos',inc);
-  if(ded){ if(+$('#tax').value)row(DB,'Impuestos',+$('#tax').value); if(+$('#seg').value)row(DB,'Seguro social',+$('#seg').value);}
-  $('#tEarn').textContent=money(earn);$('#tDed').textContent=money(ded);$('#tNet').textContent=money(net);
-  $('#prev').hidden=false;
+                if (empleado == null)
+                {
+                    MostrarError("Empleado no encontrado");
+                    return;
+                }
 
-  // handler guardar
-  $('#save').onclick=async()=>{
-    await db.add('recibos',{
-      nombre:e.name,id:e.id,ini:$('#pIni').value,fin:$('#pFin').value,
-      dias,base,extra,inc,ded,net,fecha:new Date().toISOString()
-    });
-    notice('Recibo guardado ✓');
-  };
-};
+                Console.WriteLine($"\nEmpleado: {empleado.Nombre}");
+                Console.WriteLine($"Sueldo base: RD${empleado.SueldoBase:N2}");
 
-/* ======= Cargar histórico ======= */
-async function loadHist(){
-  const list=await db.getAll('recibos');
-  const cont=$('#hist');cont.innerHTML='';
-  if(!list.length){cont.textContent='(Sin recibos)';return}
-  list.reverse().forEach(r=>{
-    cont.insertAdjacentHTML('beforeend',`
-      <history-item>
-        <h4>${r.nombre}</h4>
-        <small>${new Date(r.fecha).toLocaleDateString()} · ${r.ini} – ${r.fin}</small>
-        Neto: <strong>${money(r.net)}</strong>
-      </history-item>`);
-  });
+                Console.WriteLine("\nINGRESE INCENTIVOS:");
+                foreach (var key in empleado.Incentivos.Keys.ToList())
+                {
+                    Console.Write($"{key}: RD$");
+                    empleado.Incentivos[key] = decimal.Parse(Console.ReadLine());
+                }
+
+                Console.Write("\nDescuentos (RD$): ");
+                empleado.Descuentos = decimal.Parse(Console.ReadLine());
+
+                MostrarExito("Nómina calculada correctamente");
+            }
+            catch
+            {
+                MostrarError("Datos inválidos");
+            }
+        }
+
+        static void MostrarRecibo()
+        {
+            Console.Clear();
+            Console.WriteLine("📄 RECIBO DE PAGO\n");
+
+            try
+            {
+                Console.Write("ID del empleado: ");
+                var id = int.Parse(Console.ReadLine());
+                var empleado = empleados.FirstOrDefault(e => e.Id == id);
+
+                if (empleado == null)
+                {
+                    MostrarError("Empleado no encontrado");
+                    return;
+                }
+
+                var totalIncentivos = empleado.Incentivos.Values.Sum();
+                var salarioNeto = empleado.SueldoBase + totalIncentivos - empleado.Descuentos;
+
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("\n═══════════════════════════════════════════════");
+                Console.WriteLine($"           {EmpresaInfo.Nombre}");
+                Console.WriteLine("═══════════════════════════════════════════════");
+                Console.ForegroundColor = ConsoleColor.White;
+
+                Console.WriteLine($"Empleado: {empleado.Nombre.ToUpper()}");
+                Console.WriteLine($"Cédula: {empleado.Cedula}");
+                Console.WriteLine($"Cargo: {empleado.Cargo}");
+                Console.WriteLine($"Fecha ingreso: {empleado.FechaContratacion:dd/MM/yyyy}");
+                
+                if (File.Exists(empleado.FotoPerfilPath))
+                {
+                    Console.WriteLine($"\nFoto perfil: {Path.GetFileName(empleado.FotoPerfilPath)}");
+                }
+
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("\n───────────────────────────────────────────────");
+                Console.ForegroundColor = ConsoleColor.White;
+
+                Console.WriteLine($"Sueldo base: RD${empleado.SueldoBase:N2}");
+
+                Console.WriteLine("\nINCENTIVOS:");
+                foreach (var incentivo in empleado.Incentivos)
+                {
+                    Console.WriteLine($"{incentivo.Key}: RD${incentivo.Value:N2}");
+                }
+
+                Console.WriteLine($"\nTotal incentivos: RD${totalIncentivos:N2}");
+                Console.WriteLine($"Descuentos: RD${empleado.Descuentos:N2}");
+
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("\n───────────────────────────────────────────────");
+                Console.ForegroundColor = ConsoleColor.White;
+
+                Console.WriteLine($"TOTAL A PAGAR: RD${salarioNeto:N2}");
+
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("═══════════════════════════════════════════════");
+                Console.ForegroundColor = ConsoleColor.White;
+
+                Console.WriteLine("\nPresione cualquier tecla para continuar...");
+                Console.ReadKey();
+            }
+            catch
+            {
+                MostrarError("Error al generar recibo");
+            }
+        }
+
+        static void AsignarFoto()
+        {
+            Console.Clear();
+            Console.WriteLine("📸 ASIGNAR FOTO A EMPLEADO\n");
+
+            try
+            {
+                Console.Write("ID del empleado: ");
+                var id = int.Parse(Console.ReadLine());
+                var empleado = empleados.FirstOrDefault(e => e.Id == id);
+
+                if (empleado == null)
+                {
+                    MostrarError("Empleado no encontrado");
+                    return;
+                }
+
+                Console.WriteLine($"\nEmpleado: {empleado.Nombre}");
+                Console.WriteLine($"Foto actual: {(string.IsNullOrEmpty(empleado.FotoPerfilPath) ? "Ninguna" : Path.GetFileName(empleado.FotoPerfilPath))}");
+
+                Console.WriteLine("\nOpciones:");
+                Console.WriteLine("1. Usar foto de ejemplo");
+                Console.WriteLine("2. Especificar ruta de imagen");
+                Console.Write("\nSeleccione: ");
+                var opcion = Console.ReadLine();
+
+                switch (opcion)
+                {
+                    case "1":
+                        empleado.FotoPerfilPath = fotoEjemploPath;
+                        MostrarExito("Foto de ejemplo asignada");
+                        break;
+                    case "2":
+                        Console.Write("\nRuta completa de la imagen: ");
+                        var ruta = Console.ReadLine();
+                        if (File.Exists(ruta))
+                        {
+                            var extension = Path.GetExtension(ruta).ToLower();
+                            if (extension == ".jpg" || extension == ".jpeg" || extension == ".png")
+                            {
+                                var destino = Path.Combine(directorioFotos, $"empleado_{id}{extension}");
+                                File.Copy(ruta, destino, true);
+                                empleado.FotoPerfilPath = destino;
+                                MostrarExito("Foto asignada correctamente");
+                            }
+                            else
+                            {
+                                MostrarError("Formato no válido (solo JPG/PNG)");
+                            }
+                        }
+                        else
+                        {
+                            MostrarError("Archivo no encontrado");
+                        }
+                        break;
+                    default:
+                        MostrarError("Opción inválida");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                MostrarError($"Error: {ex.Message}");
+            }
+        }
+
+        static void VerFoto()
+        {
+            Console.Clear();
+            Console.WriteLine("🖼️ VER FOTO DE EMPLEADO\n");
+
+            try
+            {
+                Console.Write("ID del empleado: ");
+                var id = int.Parse(Console.ReadLine());
+                var empleado = empleados.FirstOrDefault(e => e.Id == id);
+
+                if (empleado == null)
+                {
+                    MostrarError("Empleado no encontrado");
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(empleado.FotoPerfilPath) || !File.Exists(empleado.FotoPerfilPath))
+                {
+                    MostrarError("El empleado no tiene foto asignada o no se encuentra");
+                    return;
+                }
+
+                Console.WriteLine($"\nMostrando foto de: {empleado.Nombre}");
+                Console.WriteLine($"Ruta: {empleado.FotoPerfilPath}");
+
+                try
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = empleado.FotoPerfilPath,
+                        UseShellExecute = true
+                    });
+                }
+                catch
+                {
+                    Console.WriteLine("\nNo se pudo abrir el visor de imágenes.");
+                    Console.WriteLine("Puede ver la imagen manualmente en la ruta indicada.");
+                }
+
+                Console.WriteLine("\nPresione cualquier tecla para continuar...");
+                Console.ReadKey();
+            }
+            catch
+            {
+                MostrarError("ID inválido");
+            }
+        }
+
+        static void MostrarExito(string mensaje)
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"\n✅ {mensaje}");
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.ReadKey();
+        }
+
+        static void MostrarError(string mensaje)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"\n❌ {mensaje}");
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.ReadKey();
+        }
+    }
 }
-
-/* ======= PWA: registrar service worker ======= */
-if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-</script>
-</body>
-</html>
